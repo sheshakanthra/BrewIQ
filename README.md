@@ -128,6 +128,18 @@ BrewIQ wraps **Groq + Llama 3.3 70B** in three distinct integrations, each groun
 
 ---
 
+## 📂 Submission Materials
+
+Everything a judge needs to evaluate BrewIQ lives in [`/docs`](docs):
+
+| Document | What's inside |
+| -------- | ------------- |
+| 🎬 [Demo Script](docs/DEMO_SCRIPT.md) | Shot-by-shot 2-minute video script with timestamps, narration, and demo triggers |
+| 🎤 [Pitch Deck](docs/PITCH_DECK.md) | 5-slide deck content (problem → solution → how it works → demo → impact) |
+| 📝 [Devpost Write-up](docs/DEVPOST.md) | Full project description, build details, challenges, and what's next |
+
+---
+
 ## 👥 Team
 
 **Sheshakanth** — [github.com/sheshakanthra](https://github.com/sheshakanthra)
