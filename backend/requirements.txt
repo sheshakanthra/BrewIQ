@@ -1,0 +1,9 @@
+# Lower bounds chosen for broad compatibility. On Python 3.13+ pip will resolve
+# to newer releases that ship prebuilt wheels (no Rust toolchain required).
+fastapi>=0.115.6
+uvicorn[standard]>=0.34.0
+sqlalchemy>=2.0.36
+pydantic>=2.10
+python-dotenv>=1.0.1
+groq>=0.15.0
+apscheduler>=3.11.0

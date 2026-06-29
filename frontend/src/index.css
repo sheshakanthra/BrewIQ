@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-espresso-bg text-cream antialiased;
+  margin: 0;
+  font-feature-settings: "ss01", "cv01";
+  /* Subtle warm radial glow behind the app for depth. */
+  background-image:
+    radial-gradient(900px 500px at 78% -8%, rgba(200, 137, 58, 0.10), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(107, 158, 107, 0.07), transparent 55%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(200, 137, 58, 0.3);
+  color: #f5edd6;
+}
+
+/* Visible focus ring for keyboard accessibility (WCAG) */
+:focus-visible {
+  outline: 2px solid rgba(200, 137, 58, 0.85);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+/* Don't double-up the ring on mouse clicks of buttons */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Thin espresso scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a1f12 transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a1f12;
+  border-radius: 8px;
+  border: 2px solid #0f0a06;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a2b18;
+}
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-espresso-border bg-espresso-card/90 shadow-[0_1px_0_0_rgba(245,237,214,0.03)_inset,0_18px_40px_-24px_rgba(0,0,0,0.8)];
+  }
+
+  .panel-title {
+    @apply text-sm font-semibold uppercase tracking-wider text-tan;
+  }
+
+  .num {
+    @apply font-mono tabular-nums;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-crema px-4 py-2 text-sm font-semibold text-espresso-bg transition hover:brightness-110 active:brightness-95 disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-espresso-border px-3.5 py-2 text-sm font-medium text-cream transition hover:border-crema/40 hover:bg-crema/5 disabled:opacity-50;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+
+  .skeleton {
+    @apply rounded-md;
+    background: linear-gradient(90deg, #1a1108 25%, #261a0c 37%, #1a1108 63%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}

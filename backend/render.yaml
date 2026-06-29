@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: brewiq-backend
+    runtime: python
+    plan: free
+    # If deploying the monorepo, set the service's Root Directory to "backend"
+    # so these commands run inside the backend/ folder.
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DEMO_MODE
+        value: "true"
+      - key: PYTHON_VERSION
+        value: "3.12.7"
