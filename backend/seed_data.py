@@ -349,8 +349,114 @@ def seed(force: bool = False) -> dict:
         db.close()
 
 
+def seed_today_orders(db, now: datetime | None = None) -> int:
+    """Generate a realistic PARTIAL day of orders for TODAY (7am → current hour).
+
+    Uses the same hourly rush curve and basket logic as the historical seed, scaled
+    to how much of the day has elapsed. Returns the number of orders created.
+    Does not commit — the caller decides.
+    """
+    now = now or datetime.now()
+    today = now.date()
+
+    hours = _allowed_hours(today, now)          # [] before 7am, else 7..now.hour
+    if not hours:
+        return 0
+    weights = [HOUR_WEIGHTS[h] for h in hours]
+    count = _order_count(today, busy_day=None, slow_day=None, now=now)
+    if count <= 0:
+        return 0
+
+    created: list[Order] = []
+    hour_counter: Counter = Counter()
+    item_counter: Counter = Counter()
+    revenue = 0.0
+
+    for _ in range(count):
+        hour = random.choices(hours, weights=weights, k=1)[0]
+        ts = datetime.combine(today, time(hour, random.randint(0, 59), random.randint(0, 59)))
+        items_json, total = _build_order_items()
+        order = Order(
+            created_at=ts,
+            items=items_json,
+            total_price=total,
+            payment_method=random.choice(PAYMENTS),
+            status="completed",
+            customer_name=random.choice(CUSTOMERS) if random.random() < 0.6 else None,
+            order_type=random.choice(ORDER_TYPES),
+        )
+        db.add(order)
+        created.append(order)
+        revenue += total
+        hour_counter[hour] += 1
+        for li in json.loads(items_json):
+            item_counter[li["name"]] += li["quantity"]
+
+    # Keep the most recent few orders "live" so the order board looks active.
+    created.sort(key=lambda o: o.created_at)
+    for o, status in zip(reversed(created), ["pending", "preparing", "ready", "preparing"]):
+        o.status = status
+
+    # Upsert today's daily_metrics row to match.
+    metric_vals = {
+        "total_orders": len(created),
+        "total_revenue": round(revenue, 2),
+        "avg_order_value": round(revenue / len(created), 2) if created else 0.0,
+        "peak_hour": hour_counter.most_common(1)[0][0] if hour_counter else None,
+        "top_item": item_counter.most_common(1)[0][0] if item_counter else None,
+    }
+    existing = db.query(DailyMetric).filter(DailyMetric.date == today).first()
+    if existing:
+        for k, v in metric_vals.items():
+            setattr(existing, k, v)
+    else:
+        db.add(DailyMetric(date=today, **metric_vals))
+
+    db.flush()
+    return len(created)
+
+
+def ensure_today_seeded() -> dict:
+    """Top up TODAY's orders if the date has rolled over since the DB was seeded.
+
+    Idempotent: if any orders already exist for the current local date, it does nothing.
+    This guarantees the dashboard's "today" KPIs are never zero on a fresh page load,
+    even on a long-lived container that crosses midnight.
+    """
+    init_db()
+    db = SessionLocal()
+    try:
+        now = datetime.now()
+        today = now.date()
+        start = datetime.combine(today, time.min)
+        end = start + timedelta(days=1)
+        existing = (
+            db.query(Order)
+            .filter(Order.created_at >= start, Order.created_at < end)
+            .count()
+        )
+        if existing > 0:
+            return {"added": 0, "existing": existing}
+
+        added = seed_today_orders(db, now)
+        db.commit()
+
+        # Refresh cached analytics so the new orders show up immediately.
+        try:
+            from services import analytics
+
+            analytics.clear_caches()
+        except Exception:
+            pass
+
+        print(f"[startup] Today ({today}) had no orders — seeded {added} partial-day order(s).")
+        return {"added": added, "existing": 0}
+    finally:
+        db.close()
+
+
 def seed_if_empty() -> dict:
-    """Called on startup — seeds only when the orders table is empty."""
+    """Called on startup — seeds the full 30 days only when the orders table is empty."""
     init_db()
     db = SessionLocal()
     try:

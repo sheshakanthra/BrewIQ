@@ -1,5 +1,6 @@
 """Order endpoints (new schema: items JSON + total_price)."""
 import json
+from collections import Counter
 from datetime import datetime
 from typing import Optional
 
@@ -66,6 +67,41 @@ def _to_out(order: Order) -> OrderOut:
 def list_orders(limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
     orders = db.query(Order).order_by(Order.created_at.desc()).limit(limit).all()
     return [_to_out(o) for o in orders]
+
+
+@router.get("/analytics")
+def order_analytics(db: Session = Depends(get_db)):
+    """Explicit `today` block (+ all-time) so dashboards never render zeros on load.
+
+    Uses datetime.now().date() — the SAME boundary the briefing and KPI queries use.
+    """
+    today = datetime.now().date()
+    orders = db.query(Order).all()
+    todays = [o for o in orders if o.created_at and o.created_at.date() == today]
+
+    item_counter: Counter = Counter()
+    for o in todays:
+        try:
+            for li in json.loads(o.items or "[]"):
+                item_counter[li["name"]] += li.get("quantity", 1)
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    todays_revenue = round(sum(o.total_price or 0 for o in todays), 2)
+    return {
+        "today": {
+            "date": today.isoformat(),
+            "orders": len(todays),
+            "revenue": todays_revenue,
+            "avg_order_value": round(todays_revenue / len(todays), 2) if todays else 0.0,
+            "top_item": item_counter.most_common(1)[0][0] if item_counter else None,
+        },
+        "all_time": {
+            "orders": len(orders),
+            "revenue": round(sum(o.total_price or 0 for o in orders), 2),
+        },
+        "revenue_trend": analytics.get_revenue_trend(7),
+    }
 
 
 @router.get("/stats")

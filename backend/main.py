@@ -28,11 +28,13 @@ def _low_stock_check():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables on startup, then seed demo data if the DB is empty.
+    # Create tables on startup, seed demo data if empty, then ensure TODAY is populated
+    # (tops up today's orders if the date rolled over since the DB was last seeded).
     init_db()
-    from seed_data import seed_if_empty
+    from seed_data import ensure_today_seeded, seed_if_empty
 
     seed_if_empty()
+    ensure_today_seeded()
     scheduler.add_job(_low_stock_check, "interval", minutes=5, id="low_stock_check")
     scheduler.start()
     yield
